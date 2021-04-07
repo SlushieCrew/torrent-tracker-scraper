@@ -12,3 +12,4 @@ pylint = "*"
 
 [packages]
 requests = "*"
+loguru = "*"

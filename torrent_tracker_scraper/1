@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
+# scrape.py
 import binascii
 import requests
 import logging
@@ -38,7 +39,7 @@ class TRACKER_ACTION:
 def is_infohash_valid(infohash: str) -> bool:
     """
     Checks if the infohash is 20 bytes long, confirming its truly of SHA-1 nature
-    :param infohas:
+    :param infohash:
     :return: True if infohash is valid, False otherwise
     """
     if not isinstance(infohash, str):
@@ -84,9 +85,7 @@ class Connection:
 
 
 class Scraper:
-    def __init__(
-        self, trackers: List = [], infohashes: Tuple[List, str] = [], timeout: int = 10
-    ):
+    def __init__(self, trackers: List = [], infohashes: Tuple[List, str] = [], timeout: int = 10):
         """
         Launches a scraper bound to a particular tracker
         :Keyword Arguments:
@@ -103,7 +102,7 @@ class Scraper:
     def get_good_infohashes(self) -> list:
         if getattr(self, "good_infohashes", None):
             return self.good_infohashes
-
+            
         good_infohashes = []
         if isinstance(self.infohashes, str):
             infohashes_list = self.infohashes.split(",")
@@ -111,9 +110,7 @@ class Scraper:
         elif isinstance(self.infohashes, list):
             good_infohashes = filter_valid_infohashes(self.infohashes)
         else:
-            log.error(
-                f"Infohashes are not supported in type: {type(self.infohashes)}. Only list of strings or comma separated string."
-            )
+            log.error(f"Infohashes are not supported in type: {type(self.infohashes)}. Only list of strings or comma separated string.")
         return good_infohashes
 
     def get_trackers(self) -> list:
@@ -134,12 +131,10 @@ class Scraper:
 
     def _connect_request(self, transaction_id: int):
         # Send a Connect Request
-        packet = struct.pack(
-            ">QLL", PROTOCOL_ID, TRACKER_ACTION.CONNECT, transaction_id
-        )
+        packet = struct.pack(">QLL", PROTOCOL_ID, TRACKER_ACTION.CONNECT, transaction_id)
         self.connection.sock.send(packet)
         # Receive a Connect Request response
-
+        
         try:
             res = self.connection.sock.recv(16)
         except ConnectionRefusedError as e:
@@ -156,14 +151,7 @@ class Scraper:
     def _scrape_response(self, transaction_id: int, connection_id: int):
         packet_hashes = self.get_packet_hashes()
         packet = (
-            struct.pack(
-                ">QLL",
-                connection_id,
-                TRACKER_ACTION.SCRAPE,
-                transaction_id,
-            )
-            + packet_hashes
-        )
+            struct.pack(">QLL", connection_id, TRACKER_ACTION.SCRAPE, transaction_id,) + packet_hashes )
         self.connection.sock.send(packet)
 
         # Scrape response
@@ -171,7 +159,7 @@ class Scraper:
             res = self.connection.sock.recv(8 + (12 * len(self.good_infohashes)))
         except socket.timeout as e:
             log.error(f"Socket timeout for {self.connection}: {e}")
-            return []
+            return [f"Socket timeout for {self.connection}: {e}"]
 
         results = list()
         for i, infohash in enumerate(self.good_infohashes, start=1):
@@ -183,6 +171,9 @@ class Scraper:
                 SCRAPE_RESPONSE_BORDER_LEFT(i) : SCRAPE_RESPONSE_BORDER_RIGHT(i)
             ]
             if len(response) != struct.calcsize(">LLL"):
+                # TODO: Improve error messages
+                result["error"] = f"Could not get stats for infohash [{self.connection}]"
+                results.append(result)
                 log.error(f"Result error: {result}")
                 continue
             seeders, completed, leechers = struct.unpack(">LLL", response)
@@ -203,9 +194,7 @@ class Scraper:
             try:
                 packet_hashes += binascii.unhexlify(infohash)
             except binascii.Error as e:
-                log.warning(
-                    f"Infohash {infohash} is invalid. Error when preparing packet hashes: {e}"
-                )
+                log.warning(f"Infohash {infohash} is invalid. Error when preparing packet hashes: {e}")
 
         return packet_hashes
 
@@ -217,38 +206,33 @@ class Scraper:
         log.debug(f"Parsing list of infohashes [{tracker.netloc}]")
         self.connection = Connection(tracker.hostname, tracker.port, self.timeout)
         tracker_url = f"{tracker.scheme}//:{tracker.netloc}"
-
+        
         # Quit scraping if there is no connection
         if self.connection.sock is None:
             # TODO: Return info which tracker failed
-            log.error(f'tracker {tracker} has failed')
+            return []
 
         # We should get the same value in a response
         transaction_id = get_transaction_id()
         try:
-            response_transaction_id, connection_id = self._connect_request(
-                transaction_id
-            )
+            response_transaction_id, connection_id = self._connect_request(transaction_id)
         except socket.timeout as e:
             log.error(f"Socket timeout for {self.connection}: {e}")
             return [f"Socket timeout for {self.connection}: {e}"]
 
         if transaction_id != response_transaction_id:
-            raise RuntimeError(
-                f"Transaction ID doesnt match in connect request [{self.connectiion}]. Expected {transaction_id}, got {response_transaction_id} "
-            )
+            raise RuntimeError(f"Transaction ID doesnt match in connect request [{self.connectiion}]. Expected {transaction_id}, got {response_transaction_id} ")
 
         # holds bad error messages
         _bad_infohashes = list()
         for infohash in self.infohashes:
             if not is_infohash_valid(infohash):
-                log.error({"infohash": infohash, "error": "Bad infohash"})
+                _bad_infohashes.append({"infohash": infohash, "error": "Bad infohash"})
 
         results = self._scrape_response(transaction_id, connection_id)
         results += _bad_infohashes
         return {"tracker": tracker_url, "results": results}
 
-    @log.catch
     def scrape(self):
         """
         Takes in an infohash or infohashes. Returns seeders, leechers and completed
@@ -262,7 +246,7 @@ class Scraper:
 
         if not self.good_infohashes:
             log.info("Nothing to do. No infohashes passed the checks")
-            return
+            return 
 
         log.info(f"Scraping infohashes: {self.good_infohashes}")
 
@@ -273,4 +257,6 @@ class Scraper:
             if results.ready():
                 break
             time.sleep(0.3)
-        return list(filter(lambda result: result != [], results.get()))
+        results = list(filter(lambda result: result != [], results.get()))
+
+        return results

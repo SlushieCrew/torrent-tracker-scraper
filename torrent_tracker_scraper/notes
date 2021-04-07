@@ -1,0 +1,27 @@
+"""
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+  File "/usr/lib/python3.8/multiprocessing/pool.py", line 48, in mapstar
+    return list(map(*args))
+  File "/home/skandix/gitclones/torrent-tracker-scraper/torrent_tracker_scraper/scraper.py", line 213, in scrape_tracker
+    response_transaction_id, connection_id = self._connect_request(transaction_id)
+  File "/home/skandix/gitclones/torrent-tracker-scraper/torrent_tracker_scraper/scraper.py", line 137, in _connect_request
+    res = self.connection.sock.recv(16)
+ConnectionRefusedError: [Errno 111] Connection refused
+"""
+
+
+"""
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+  File "/usr/lib/python3.8/multiprocessing/pool.py", line 48, in mapstar
+    return list(map(*args))
+  File "/home/skandix/gitclones/torrent-tracker-scraper/torrent_tracker_scraper/scraper.py", line 216, in scrape_tracker
+    response_transaction_id, connection_id = self._connect_request(transaction_id)
+  File "/home/skandix/gitclones/torrent-tracker-scraper/torrent_tracker_scraper/scraper.py", line 142, in _connect_request
+    _, response_transaction_id, connection_id = struct.unpack(">LLQ", res)
+UnboundLocalError: local variable 'res' referenced before assignment
+"""
+
